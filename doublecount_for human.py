@@ -6,6 +6,7 @@ import math
 import winsound
 import pygame
 import time
+import numpy as np
 
 model=YOLO('yolov8s.pt')
 prev_sound_time = time.time()
@@ -74,7 +75,9 @@ up={}
 
 counter_down=[]
 counter_up=[]
-all_rois = []
+all_rois = [None] * 100  # Initialize a list with 100 elements
+temp_all_rois=[None] * 100
+flag=int(0)
 while True:
     new_sound_time = time.time()
 
@@ -106,7 +109,8 @@ while True:
         if 'person' in c:
             list.append([x1,y1,x2,y2])
             #print(c)
-            
+
+       
 
     bbox_id=tracker.update(list)
     #print(bbox_id)
@@ -132,33 +136,41 @@ while True:
             cv2.circle(frame,(cx,cy),4,(0,0,255),-1)
             cv2.rectangle(frame, (x3, y3), (x4, y4), (0, 255, 0), 2)
 
-              # Initialize an empty list to store ROIs
+              # apply sound effect
             new_sound_time = time.time()
             if new_sound_time>=prev_sound_time+2:
                 crash_sound1.play()
                 prev_sound_time=new_sound_time
+                for ids in range(100):
+                    temp_all_rois[ids]=all_rois[ids]
+                flag=1
                 
-            roi = frame[y3:y4, x3:x4]
+
+            all_rois[id]=frame[y3:y4, x3:x4]
             
-           
+            for ids in range(100):
+                if all_rois[ids] is not None:
+                    cv2.imshow('ROI' + str(ids), all_rois[ids])
 
-            cv2.imshow('ROI', roi)
+            if flag == 1:
+                for ids in range(100):
+                    if all_rois[ids] is not None:
+                        if np.array_equal(all_rois[ids], temp_all_rois[ids]):
+                            cv2.destroyWindow('ROI' + str(ids))
+                            all_rois[ids] = None
+                flag = 0
 
-            if cx>red_line_x or cx<blue_line_x:
-                cv2.waitKey(5000)
-                roi.release()
-                cv2.destroyWindow('ROI')
 
             cv2.putText(frame,str(id),(cx,cy),cv2.FONT_HERSHEY_COMPLEX,0.8,(0,255,255),2)
 
         
-        if id in down:
+        '''if id in down:
            if blue_line_x < (cx + offset) and blue_line_x > (cx - offset):         
              cv2.circle(frame,(cx,cy),4,(0,0,255),-1)
              cv2.rectangle(frame, (x3, y3), (x4, y4), (0, 255, 0), 2)
              cv2.putText(frame,str(id),(cx,cy),cv2.FONT_HERSHEY_COMPLEX,0.8,(0,255,255),2)
              #counter+=1
-             counter_down.append(id)  # get a list of the cars and buses which are entering the line red and exiting the line blue
+             counter_down.append(id)  # get a list of the cars and buses which are entering the line red and exiting the line blue'''
             
 
         # condition for cars entering from  blue line
@@ -166,19 +178,30 @@ while True:
         if cx<=blue_line_x and cx>0:
             
             up[id]=cx
+            
+            if all_rois[id] is not None:
+                cv2.destroyWindow('ROI' + str(id))
+                all_rois[id]=None
+
             cv2.circle(frame,(cx,cy),4,(0,0,255),-1)
             cv2.rectangle(frame, (x3, y3), (x4, y4), (255, 0, 0), 2)
             cv2.putText(frame,str(id),(cx,cy),cv2.FONT_HERSHEY_COMPLEX,0.8,(0,255,255),2) 
 
             crash_sound.play()
-        if id in up:
+        '''if id in up:
            if red_line_x < (cx + offset) and red_line_x > (cx - offset):         
              cv2.circle(frame,(cx,cy),4,(0,0,255),-1)
              cv2.putText(frame,str(id),(cx,cy),cv2.FONT_HERSHEY_COMPLEX,0.8,(0,255,255),2)
              #counter+=1
-             counter_up.append(id)  # get a list of the cars which are entering the line 1 and exiting the line 2
+             counter_up.append(id)  # get a list of the cars which are entering the line 1 and exiting the line 2'''
 
 
+        if cx>=red_line_x:
+
+            
+            if all_rois[id] is not None:
+                cv2.destroyWindow('ROI' + str(id))
+                all_rois[id]=None
 
 
 
@@ -196,13 +219,12 @@ while True:
     
   
 
-
-    downwards = (len(counter_down))
+    '''downwards = (len(counter_down))
     cv2.putText(frame,('going down - ')+ str(downwards),(60,40),cv2.FONT_HERSHEY_SIMPLEX, 0.5, green_color, 1, cv2.LINE_AA)    
 
     
     upwards = (len(counter_up))
-    cv2.putText(frame,('going up - ')+ str(upwards),(60,60),cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1, cv2.LINE_AA)  
+    cv2.putText(frame,('going up - ')+ str(upwards),(60,60),cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1, cv2.LINE_AA)''' 
 
     cv2.imshow("frames", frame)
     if cv2.waitKey(1)&0xFF==27:
